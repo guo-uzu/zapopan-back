@@ -1,0 +1,35 @@
+
+# Virtual environment
+.venv/
+env/
+venv/
+env3.*/
+
+# Python cache files
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+
+# Environment variables and secrets
+.env
+secrets.json
+
+# IDE specific files
+.idea/  # For PyCharm/IntelliJ
+.vscode/ # For VS Code (optional, as some settings might be shared)
+
+# OS generated files
+.DS_Store # macOS
+
+# Database files (if using SQLite for development)
+test.db
+*.sqlite
+*.sqlite3
+
+# Logs and builds
+dist/
+build/
+logs/
+*.log
+
+# You can find more comprehensive templates on the [Toptal gitignore.io](https://www.toptal.com/developers/gitignore) site by searching for "Python" and "FastAPI".

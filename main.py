@@ -1,17 +1,20 @@
 import io
-from typing import List
-from fastapi import FastAPI
+from typing import List, Literal
+
+import matplotlib
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic.main import BaseModel
-import matplotlib.pyplot as plt
-import numpy as np
+from pydantic import BaseModel
 
 app = FastAPI()
+
 origins = [
     "http://localhost:3000",
     "https://atencion-al-usuario.uzu.digital",
-    "https://atencion-al-usuario.uzu.digital/",
 ]
 
 app.add_middleware(
@@ -32,31 +35,37 @@ class ChartRequest(BaseModel):
     dateFrom: str
     dateTo: str
     data: List[ReportItem]
-    formatFile: str
+    formatFile: Literal["png", "pdf", "svg", "jpeg"]
 
 @app.post("/api/create-chart")
-def read_root(req: ChartRequest):
-    xAxis = [i.name for i in req.data]
-    yAxis = [i.n_reports for i in req.data]
-    ticks = [i for i in range(len(req.data))]
-    fig, ax = plt.subplots()
-    barContainer = ax.bar(xAxis, yAxis, label=xAxis, color=["#00c0ff"])
-    ax.bar_label(barContainer, fmt='{:,.0f}')
+def create_chart(req: ChartRequest):
+    if not req.data:
+        raise HTTPException(status_code=400, detail="No hay datos para graficar")
+
+    x_axis = [i.name for i in req.data]
+    y_axis = [i.n_reports for i in req.data]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    bars = ax.bar(x_axis, y_axis, color="#00c0ff")
+    ax.bar_label(bars, fmt="%.0f")
     ax.set_ylabel("Reportes")
     ax.set_title(req.title)
-    if(len(req.data) > 3):
-        font2 = {'color':'black','size':8}
-        ax.set_xticklabels(xAxis, rotation=45, ha="right", fontdict=font2)
+
+    if len(req.data) > 3:
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
         plt.tight_layout()
+
     buf = io.BytesIO()
-    plt.savefig(buf, format=req.formatFile)
+    fig.savefig(buf, format=req.formatFile, bbox_inches="tight")
     buf.seek(0)
     plt.close(fig)
-    if req.formatFile == "png":
-        return StreamingResponse(buf, media_type="image/png")
-    elif req.formatFile == "pdf":
-        return StreamingResponse(buf, media_type="application/pdf")
-    elif req.formatFile == "svg":
-        return StreamingResponse(buf, media_type="image/svg+xml")
-    else:
-        return StreamingResponse(buf, media_type="image/jpeg")
+
+    media_types = {
+        "png": "image/png",
+        "pdf": "application/pdf",
+        "svg": "image/svg+xml",
+        "jpeg": "image/jpeg",
+    }
+
+    return StreamingResponse(buf, media_type=media_types[req.formatFile])
